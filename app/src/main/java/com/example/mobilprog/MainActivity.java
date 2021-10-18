@@ -32,6 +32,7 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout gallery;
     FirebaseStorage storage;
     StorageReference storageReference;
+    StorageReference listRef;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,26 +42,9 @@ public class MainActivity extends AppCompatActivity {
         storageReference = storage.getReference();
 
         gallery = findViewById(R.id.gallery);
-        StorageReference listRef = storage.getReference().child("Images/");
-        listRef.listAll()
-                .addOnSuccessListener(new OnSuccessListener<ListResult>() {
-                    @Override
-                    public void onSuccess(ListResult listResult) {
-                        for (StorageReference item : listResult.getItems()) {
-                            ImageView imageView = new ImageView(getApplicationContext());
-                            GlideApp.with(getApplicationContext()).load(item).into(imageView);
+        listRef = storage.getReference().child("Images/");
 
-                            imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                            gallery.addView(imageView, ViewGroup.LayoutParams.MATCH_PARENT,800);
-                        }
-                    }
-                })
-                .addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        Toast.makeText(MainActivity.this, "Image load error!", Toast.LENGTH_SHORT).show();
-                    }
-                });
+        loadImages();
     }
 
     public void onMap(View view) {
@@ -92,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
                         @Override
                         public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
                             Toast.makeText(MainActivity.this, "Image Uploaded!", Toast.LENGTH_SHORT).show();
+                            loadImages();
                         }
                     })
                     .addOnFailureListener(new OnFailureListener() {
@@ -102,5 +87,29 @@ public class MainActivity extends AppCompatActivity {
                     })
             ;
         }
+    }
+
+    private void loadImages(){
+        gallery.removeAllViews();
+        listRef.listAll()
+                .addOnSuccessListener(new OnSuccessListener<ListResult>() {
+                    @Override
+                    public void onSuccess(ListResult listResult) {
+                        for (StorageReference item : listResult.getItems()) {
+                            ImageView imageView = new ImageView(getApplicationContext());
+                            GlideApp.with(getApplicationContext()).load(item).into(imageView);
+
+                            imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                            gallery.addView(imageView, ViewGroup.LayoutParams.MATCH_PARENT,700);
+
+                        }
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Toast.makeText(MainActivity.this, "Image load error!", Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
 }
