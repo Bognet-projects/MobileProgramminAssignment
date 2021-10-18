@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "500908499529",
+    "project_id": "mobilprog-2021",
+    "storage_bucket": "mobilprog-2021.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:500908499529:android:d372ac90ed917457039598",
+        "android_client_info": {
+          "package_name": "com.example.mobilprog"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "500908499529-n4p7e46kbnovjad9tfdbn9fk3je3ibhq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB2FYWW-tQ4Iw01k9Bh08hXf1jrqJ2jW6w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "500908499529-n4p7e46kbnovjad9tfdbn9fk3je3ibhq.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
