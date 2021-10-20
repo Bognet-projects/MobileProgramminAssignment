@@ -24,11 +24,18 @@ import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.tasks.CancellationTokenSource;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.ListResult;
 import com.google.firebase.storage.OnProgressListener;
+import com.google.firebase.storage.StorageMetadata;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 
@@ -43,6 +50,7 @@ import java.util.UUID;
 public class MainActivity extends AppCompatActivity {
 
     private static final int TAKE_IMAGE_REQUEST = 22;
+    private FusedLocationProviderClient fusedLocationClient;
     private LinearLayout gallery;
     private String currentPhotoPath;
     private ProgressBar progressBar;
@@ -56,6 +64,9 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         storage = FirebaseStorage.getInstance();
         storageReference = storage.getReference();
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        ActivityCompat.requestPermissions(this, new String[]{"android.permission.ACCESS_FINE_LOCATION", "android.permission.ACCESS_COARSE_LOCATION"}, 0);
+
 
         gallery = findViewById(R.id.gallery);
         progressBar = findViewById(R.id.uploadProgress);
@@ -82,9 +93,7 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(MainActivity.this, "Error occurred while creating the File!", Toast.LENGTH_SHORT).show();
             }
             if (photoFile != null) {
-                Uri photoURI = FileProvider.getUriForFile(this,
-                        "com.example.android.fileprovider",
-                        photoFile);
+                Uri photoURI = FileProvider.getUriForFile(this, "com.example.android.fileprovider", photoFile);
                 i.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
                 startActivityForResult(i, TAKE_IMAGE_REQUEST);
             }
@@ -95,8 +104,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == TAKE_IMAGE_REQUEST && resultCode == RESULT_OK) {
-            File f = new File(currentPhotoPath);
 
+            File f = new File(currentPhotoPath);
 
             StorageReference ref = storageReference.child("Images/" + f.getName());
 
@@ -115,6 +124,7 @@ public class MainActivity extends AppCompatActivity {
                             progressBar.setVisibility(View.INVISIBLE);
                             Toast.makeText(MainActivity.this, "Image Uploaded!", Toast.LENGTH_SHORT).show();
                             loadImages();
+                            createLocationMetadata(ref);
                         }
                     })
                     .addOnFailureListener(new OnFailureListener() {
@@ -159,6 +169,49 @@ public class MainActivity extends AppCompatActivity {
 
         currentPhotoPath = image.getAbsolutePath();
         return image;
+    }
+
+    private void createLocationMetadata(StorageReference ref) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+
+        CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+        fusedLocationClient.getCurrentLocation(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY, cancellationTokenSource.getToken())
+                .addOnSuccessListener(new OnSuccessListener<Location>() {
+                    @Override
+                    public void onSuccess(Location location) {
+                        if (location != null) {
+                            StorageMetadata metadata = new StorageMetadata.Builder()
+                                    .setCustomMetadata("Latitude", String.valueOf(location.getLatitude()))
+                                    .setCustomMetadata("Longitude", String.valueOf(location.getLongitude()))
+                                    .build();
+
+                            ref.updateMetadata(metadata)
+                                    .addOnSuccessListener(new OnSuccessListener<StorageMetadata>() {
+                                        @Override
+                                        public void onSuccess(StorageMetadata storageMetadata) {
+                                            Toast.makeText(MainActivity.this, "Image Location is saved!", Toast.LENGTH_SHORT).show();
+                                        }
+                                    })
+                                    .addOnFailureListener(new OnFailureListener() {
+                                        @Override
+                                        public void onFailure(@NonNull Exception e) {
+                                            Toast.makeText(MainActivity.this, "Failed to save location for the image!", Toast.LENGTH_LONG).show();
+                                        }
+                                    })
+                            ;
+                        }
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Toast.makeText(MainActivity.this, "The current location is not available!", Toast.LENGTH_SHORT).show();
+                    }
+                })
+
+        ;
     }
 
 }
