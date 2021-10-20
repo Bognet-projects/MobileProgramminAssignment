@@ -148,8 +148,14 @@ public class MainActivity extends AppCompatActivity {
                             GlideApp.with(getApplicationContext()).load(item).into(imageView);
 
                             imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                            gallery.addView(imageView, ViewGroup.LayoutParams.MATCH_PARENT, 700);
+                            imageView.setOnClickListener(new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                    openImage(item.getPath());
+                                }
+                            });
 
+                            gallery.addView(imageView, ViewGroup.LayoutParams.MATCH_PARENT, 700);
                         }
                     }
                 })
@@ -212,6 +218,12 @@ public class MainActivity extends AppCompatActivity {
                 })
 
         ;
+    }
+
+    private void openImage(String path){
+        Intent i = new Intent(this, ImageViewerActivity.class);
+        i.putExtra("image", path);
+        startActivity(i);
     }
 
 }
