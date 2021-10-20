@@ -1,22 +1,13 @@
 package com.example.mobilprog;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.FileProvider;
-
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
-import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
@@ -24,28 +15,23 @@ import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.FileProvider;
+
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.tasks.CancellationTokenSource;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.android.gms.tasks.Task;
 import com.google.firebase.storage.FirebaseStorage;
-import com.google.firebase.storage.ListResult;
-import com.google.firebase.storage.OnProgressListener;
 import com.google.firebase.storage.StorageMetadata;
 import com.google.firebase.storage.StorageReference;
-import com.google.firebase.storage.UploadTask;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.SimpleTimeZone;
-import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -83,6 +69,7 @@ public class MainActivity extends AppCompatActivity {
         startActivity(i);
     }
 
+    @SuppressWarnings("deprecation")
     public void onImage(View view) {
         Intent i = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         if (i.resolveActivity(getPackageManager()) != null) {
@@ -110,29 +97,18 @@ public class MainActivity extends AppCompatActivity {
             StorageReference ref = storageReference.child("Images/" + f.getName());
 
             ref.putFile(Uri.fromFile(f))
-                    .addOnProgressListener(new OnProgressListener<UploadTask.TaskSnapshot>() {
-                        @Override
-                        public void onProgress(@NonNull UploadTask.TaskSnapshot snapshot) {
-                            double progress = (100.0 * snapshot.getBytesTransferred()) / snapshot.getTotalByteCount();
-                            progressBar.setVisibility(View.VISIBLE);
-                            progressBar.setProgress((int) progress);
-                        }
+                    .addOnProgressListener(snapshot -> {
+                        double progress = (100.0 * snapshot.getBytesTransferred()) / snapshot.getTotalByteCount();
+                        progressBar.setVisibility(View.VISIBLE);
+                        progressBar.setProgress((int) progress);
                     })
-                    .addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
-                        @Override
-                        public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                            progressBar.setVisibility(View.INVISIBLE);
-                            Toast.makeText(MainActivity.this, "Image Uploaded!", Toast.LENGTH_SHORT).show();
-                            loadImages();
-                            createLocationMetadata(ref);
-                        }
+                    .addOnSuccessListener(taskSnapshot -> {
+                        progressBar.setVisibility(View.INVISIBLE);
+                        Toast.makeText(MainActivity.this, "Image Uploaded!", Toast.LENGTH_SHORT).show();
+                        loadImages();
+                        createLocationMetadata(ref);
                     })
-                    .addOnFailureListener(new OnFailureListener() {
-                        @Override
-                        public void onFailure(@NonNull Exception e) {
-                            Toast.makeText(MainActivity.this, "Failed " + e.getMessage(), Toast.LENGTH_LONG).show();
-                        }
-                    })
+                    .addOnFailureListener(e -> Toast.makeText(MainActivity.this, "Failed " + e.getMessage(), Toast.LENGTH_LONG).show())
             ;
         }
     }
@@ -140,31 +116,18 @@ public class MainActivity extends AppCompatActivity {
     private void loadImages() {
         gallery.removeAllViews();
         listRef.listAll()
-                .addOnSuccessListener(new OnSuccessListener<ListResult>() {
-                    @Override
-                    public void onSuccess(ListResult listResult) {
-                        for (StorageReference item : listResult.getItems()) {
-                            ImageView imageView = new ImageView(getApplicationContext());
-                            GlideApp.with(getApplicationContext()).load(item).into(imageView);
+                .addOnSuccessListener(listResult -> {
+                    for (StorageReference item : listResult.getItems()) {
+                        ImageView imageView = new ImageView(getApplicationContext());
+                        GlideApp.with(getApplicationContext()).load(item).into(imageView);
 
-                            imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                            imageView.setOnClickListener(new View.OnClickListener() {
-                                @Override
-                                public void onClick(View v) {
-                                    openImage(item.getPath());
-                                }
-                            });
+                        imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                        imageView.setOnClickListener(v -> openImage(item.getPath()));
 
-                            gallery.addView(imageView, ViewGroup.LayoutParams.MATCH_PARENT, 700);
-                        }
+                        gallery.addView(imageView, ViewGroup.LayoutParams.MATCH_PARENT, 700);
                     }
                 })
-                .addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        Toast.makeText(MainActivity.this, "Image load error!", Toast.LENGTH_SHORT).show();
-                    }
-                });
+                .addOnFailureListener(e -> Toast.makeText(MainActivity.this, "Image load error!", Toast.LENGTH_SHORT).show());
     }
 
     private File createImageFile() throws IOException {
@@ -184,38 +147,20 @@ public class MainActivity extends AppCompatActivity {
 
         CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         fusedLocationClient.getCurrentLocation(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY, cancellationTokenSource.getToken())
-                .addOnSuccessListener(new OnSuccessListener<Location>() {
-                    @Override
-                    public void onSuccess(Location location) {
-                        if (location != null) {
-                            StorageMetadata metadata = new StorageMetadata.Builder()
-                                    .setCustomMetadata("Latitude", String.valueOf(location.getLatitude()))
-                                    .setCustomMetadata("Longitude", String.valueOf(location.getLongitude()))
-                                    .build();
+                .addOnSuccessListener(location -> {
+                    if (location != null) {
+                        StorageMetadata metadata = new StorageMetadata.Builder()
+                                .setCustomMetadata("Latitude", String.valueOf(location.getLatitude()))
+                                .setCustomMetadata("Longitude", String.valueOf(location.getLongitude()))
+                                .build();
 
-                            ref.updateMetadata(metadata)
-                                    .addOnSuccessListener(new OnSuccessListener<StorageMetadata>() {
-                                        @Override
-                                        public void onSuccess(StorageMetadata storageMetadata) {
-                                            Toast.makeText(MainActivity.this, "Image Location is saved!", Toast.LENGTH_SHORT).show();
-                                        }
-                                    })
-                                    .addOnFailureListener(new OnFailureListener() {
-                                        @Override
-                                        public void onFailure(@NonNull Exception e) {
-                                            Toast.makeText(MainActivity.this, "Failed to save location for the image!", Toast.LENGTH_LONG).show();
-                                        }
-                                    })
-                            ;
-                        }
+                        ref.updateMetadata(metadata)
+                                .addOnSuccessListener(storageMetadata -> Toast.makeText(MainActivity.this, "Image Location is saved!", Toast.LENGTH_SHORT).show())
+                                .addOnFailureListener(e -> Toast.makeText(MainActivity.this, "Failed to save location for the image!", Toast.LENGTH_LONG).show())
+                        ;
                     }
                 })
-                .addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        Toast.makeText(MainActivity.this, "The current location is not available!", Toast.LENGTH_SHORT).show();
-                    }
-                })
+                .addOnFailureListener(e -> Toast.makeText(MainActivity.this, "The current location is not available!", Toast.LENGTH_SHORT).show())
 
         ;
     }
