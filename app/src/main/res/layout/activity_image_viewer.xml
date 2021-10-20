@@ -28,10 +28,11 @@
             android:text="Show on Map" />
 
         <Button
-            android:id="@+id/button3"
+            android:id="@+id/deleteBtn"
             style="@style/Widget.AppCompat.Button.Colored"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:onClick="onDelete"
             android:text="Delete" />
     </LinearLayout>
 

@@ -151,7 +151,7 @@ public class MainActivity extends AppCompatActivity {
                             imageView.setOnClickListener(new View.OnClickListener() {
                                 @Override
                                 public void onClick(View v) {
-                                    openImage(item.getPath());
+                                    openImage(item.getName());
                                 }
                             });
 
@@ -220,9 +220,9 @@ public class MainActivity extends AppCompatActivity {
         ;
     }
 
-    private void openImage(String path){
+    private void openImage(String name){
         Intent i = new Intent(this, ImageViewerActivity.class);
-        i.putExtra("image", path);
+        i.putExtra("image", name);
         startActivity(i);
     }
 

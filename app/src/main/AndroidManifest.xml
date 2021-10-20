@@ -20,6 +20,7 @@
         android:theme="@style/Theme.Mobilprog">
         <activity
             android:name=".ImageViewerActivity"
+            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"
             android:exported="false" />
         <!--
              The API key for Google Maps-based APIs is defined as a string resource.
