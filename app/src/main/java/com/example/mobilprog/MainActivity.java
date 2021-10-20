@@ -3,33 +3,49 @@ package com.example.mobilprog;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.FileProvider;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.ListResult;
+import com.google.firebase.storage.OnProgressListener;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.SimpleTimeZone;
 import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final int TAKE_IMAGE_REQUEST = 22;
     private LinearLayout gallery;
+    private String currentPhotoPath;
+    private ProgressBar progressBar;
     FirebaseStorage storage;
     StorageReference storageReference;
     StorageReference listRef;
@@ -42,9 +58,13 @@ public class MainActivity extends AppCompatActivity {
         storageReference = storage.getReference();
 
         gallery = findViewById(R.id.gallery);
+        progressBar = findViewById(R.id.uploadProgress);
+        progressBar.setVisibility(ViewGroup.INVISIBLE);
+
         listRef = storage.getReference().child("Images/");
 
         loadImages();
+
     }
 
     public void onMap(View view) {
@@ -54,27 +74,45 @@ public class MainActivity extends AppCompatActivity {
 
     public void onImage(View view) {
         Intent i = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        startActivityForResult(i, TAKE_IMAGE_REQUEST);
+        if (i.resolveActivity(getPackageManager()) != null) {
+            File photoFile = null;
+            try {
+                photoFile = createImageFile();
+            } catch (IOException ex) {
+                Toast.makeText(MainActivity.this, "Error occurred while creating the File!", Toast.LENGTH_SHORT).show();
+            }
+            if (photoFile != null) {
+                Uri photoURI = FileProvider.getUriForFile(this,
+                        "com.example.android.fileprovider",
+                        photoFile);
+                i.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
+                startActivityForResult(i, TAKE_IMAGE_REQUEST);
+            }
+        }
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == TAKE_IMAGE_REQUEST && resultCode == RESULT_OK && data != null) {
+        if (requestCode == TAKE_IMAGE_REQUEST && resultCode == RESULT_OK) {
+            File f = new File(currentPhotoPath);
 
-            Bundle extras = data.getExtras();
-            Bitmap imageBitmap = (Bitmap) extras.get("data");
 
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            imageBitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
-            byte[] imageData = baos.toByteArray();
+            StorageReference ref = storageReference.child("Images/" + f.getName());
 
-            StorageReference ref = storageReference.child("Images/" + UUID.randomUUID().toString());
-
-            ref.putBytes(imageData)
+            ref.putFile(Uri.fromFile(f))
+                    .addOnProgressListener(new OnProgressListener<UploadTask.TaskSnapshot>() {
+                        @Override
+                        public void onProgress(@NonNull UploadTask.TaskSnapshot snapshot) {
+                            double progress = (100.0 * snapshot.getBytesTransferred()) / snapshot.getTotalByteCount();
+                            progressBar.setVisibility(View.VISIBLE);
+                            progressBar.setProgress((int) progress);
+                        }
+                    })
                     .addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
                         @Override
                         public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                            progressBar.setVisibility(View.INVISIBLE);
                             Toast.makeText(MainActivity.this, "Image Uploaded!", Toast.LENGTH_SHORT).show();
                             loadImages();
                         }
@@ -89,7 +127,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void loadImages(){
+    private void loadImages() {
         gallery.removeAllViews();
         listRef.listAll()
                 .addOnSuccessListener(new OnSuccessListener<ListResult>() {
@@ -100,7 +138,7 @@ public class MainActivity extends AppCompatActivity {
                             GlideApp.with(getApplicationContext()).load(item).into(imageView);
 
                             imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                            gallery.addView(imageView, ViewGroup.LayoutParams.MATCH_PARENT,700);
+                            gallery.addView(imageView, ViewGroup.LayoutParams.MATCH_PARENT, 700);
 
                         }
                     }
@@ -112,4 +150,15 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
     }
+
+    private File createImageFile() throws IOException {
+        @SuppressLint("SimpleDateFormat") String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String imageFileName = "JPEG_" + timeStamp;
+        File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+        File image = File.createTempFile(imageFileName, "jpg", storageDir);
+
+        currentPhotoPath = image.getAbsolutePath();
+        return image;
+    }
+
 }
