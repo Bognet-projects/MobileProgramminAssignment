@@ -2,9 +2,13 @@ package com.example.mobilprog;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.FileProvider;
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -17,13 +21,17 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.view.Gravity;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import com.firebase.ui.auth.AuthUI;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
@@ -32,6 +40,8 @@ import com.google.android.gms.tasks.CancellationTokenSource;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
+import com.google.android.material.navigation.NavigationView;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.ListResult;
 import com.google.firebase.storage.OnProgressListener;
@@ -47,13 +57,21 @@ import java.util.Date;
 import java.util.SimpleTimeZone;
 import java.util.UUID;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
 
     private static final int TAKE_IMAGE_REQUEST = 22;
+
     private FusedLocationProviderClient fusedLocationClient;
+
+    private DrawerLayout drawerLayout;
+    private NavigationView navigationView;
+    private Toolbar toolbar;
     private LinearLayout gallery;
+    private TextView name;
+
     private String currentPhotoPath;
     private ProgressBar progressBar;
+
     FirebaseStorage storage;
     StorageReference storageReference;
     StorageReference listRef;
@@ -62,28 +80,79 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        //Get Storage reference from Firebase
         storage = FirebaseStorage.getInstance();
         storageReference = storage.getReference();
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-        ActivityCompat.requestPermissions(this, new String[]{"android.permission.ACCESS_FINE_LOCATION", "android.permission.ACCESS_COARSE_LOCATION"}, 0);
-
-
-        gallery = findViewById(R.id.gallery);
-        progressBar = findViewById(R.id.uploadProgress);
-        progressBar.setVisibility(ViewGroup.INVISIBLE);
-
         listRef = storage.getReference().child("Images/");
 
+        //Get Location Client for active location
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
+        //ACCESS_FINE_LOCATION and ACCESS_COARSE_LOCATION permission request from user
+        ActivityCompat.requestPermissions(this, new String[]{"android.permission.ACCESS_FINE_LOCATION", "android.permission.ACCESS_COARSE_LOCATION"}, 0);
+
+        //View elements by ID
+        gallery = findViewById(R.id.gallery);
+        progressBar = findViewById(R.id.uploadProgress);
+        drawerLayout = findViewById(R.id.drawerLayout);
+        navigationView = findViewById(R.id.navView);
+        toolbar = findViewById(R.id.toolbar);
+
+        //Toolbar setup
+        setSupportActionBar(toolbar);
+
+        navigationView.bringToFront();
+        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(this, drawerLayout, toolbar, R.string.nav_drawer_open, R.string.nav_drawer_close);
+        drawerLayout.addDrawerListener(toggle);
+        toggle.syncState();
+
+        navigationView.setNavigationItemSelectedListener(this);
+        navigationView.setCheckedItem(R.id.nav_home);
+
+        //Hide progressbar
+        progressBar.setVisibility(ViewGroup.INVISIBLE);
+
+        //Add current user name to the view
+        name = navigationView.getHeaderView(0).findViewById(R.id.userName);
+        name.setText(FirebaseAuth.getInstance().getCurrentUser().getDisplayName());
         loadImages();
 
     }
 
-    public void onMap(View view) {
+    @Override
+    public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+
+        switch (item.getItemId()){
+            case R.id.nav_map:
+                onMap();
+                break;
+            case R.id.nav_upload:
+                onImage();
+                break;
+            case R.id.nav_logout:
+                onLogout();
+                break;
+        }
+        drawerLayout.closeDrawer(GravityCompat.START);
+        return false;
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (drawerLayout.isDrawerOpen(GravityCompat.START)){
+            drawerLayout.closeDrawer(GravityCompat.START);
+        }else {
+            super.onBackPressed();
+        }
+    }
+
+    public void onMap() {
         Intent i = new Intent(this, MapsActivity.class);
         startActivity(i);
     }
 
-    public void onImage(View view) {
+    public void onImage() {
         Intent i = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         if (i.resolveActivity(getPackageManager()) != null) {
             File photoFile = null;
@@ -98,6 +167,13 @@ public class MainActivity extends AppCompatActivity {
                 startActivityForResult(i, TAKE_IMAGE_REQUEST);
             }
         }
+    }
+
+    public void onLogout() {
+        FirebaseAuth.getInstance().signOut();
+        AuthUI.getInstance().signOut(this);
+        Intent i = new Intent(this, LoginActivity.class);
+        startActivity(i);
     }
 
     @Override
@@ -220,7 +296,7 @@ public class MainActivity extends AppCompatActivity {
         ;
     }
 
-    private void openImage(String name){
+    private void openImage(String name) {
         Intent i = new Intent(this, ImageViewerActivity.class);
         i.putExtra("image", name);
         startActivity(i);

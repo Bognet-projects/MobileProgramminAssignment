@@ -3,9 +3,14 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="..\:/Users/bogna/AndroidStudioProjects/mobilprog/app/src/main/res/drawable/hamburger.xml" value="0.290625" />
+        <entry key="..\:/Users/bogna/AndroidStudioProjects/mobilprog/app/src/main/res/drawable/home_icon.xml" value="0.290625" />
         <entry key="..\:/Users/bogna/AndroidStudioProjects/mobilprog/app/src/main/res/layout/activity_image_viewer.xml" value="0.27447916666666666" />
+        <entry key="..\:/Users/bogna/AndroidStudioProjects/mobilprog/app/src/main/res/layout/activity_login.xml" value="0.2604166666666667" />
         <entry key="..\:/Users/bogna/AndroidStudioProjects/mobilprog/app/src/main/res/layout/activity_main.xml" value="0.27447916666666666" />
         <entry key="..\:/Users/bogna/AndroidStudioProjects/mobilprog/app/src/main/res/layout/activity_maps.xml" value="0.27447916666666666" />
+        <entry key="..\:/Users/bogna/AndroidStudioProjects/mobilprog/app/src/main/res/layout/header.xml" value="0.27447916666666666" />
+        <entry key="..\:/Users/bogna/AndroidStudioProjects/mobilprog/app/src/main/res/menu/main_menu.xml" value="0.27447916666666666" />
         <entry key="..\:/Users/bogna/AndroidStudioProjects/mobilprog/app/src/main/res/xml/file_paths.xml" value="0.27447916666666666" />
       </map>
     </option>
